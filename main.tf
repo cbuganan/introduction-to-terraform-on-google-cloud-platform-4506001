@@ -24,12 +24,25 @@ module "app_network" {
       allow = [
         {
           protocol = "tcp"
-          ports    = optional["80","443"]
+          ports    = ["80","443"]
         }
       ]
     }
   ]
 }
+
+resource "google_compute_network" "app" {
+  name                    = var.network_name
+  auto_create_subnetworks = false
+}
+
+resource "google_compute_subnetwork" "app" {
+  name          = var.network_name
+  ip_cidr_range = var.network_ip_range
+  region        = var.region
+  network       = google_compute_network.app.id
+}
+
 
 data "google_compute_image" "ubuntu" {
   most_recent = true
@@ -41,8 +54,7 @@ resource "google_compute_instance" "blog" {
   name         = var.app_name
   machine_type = var.machine_type
 
-tags = ["${var.network_name}-web"]
-
+  
   boot_disk {
     initialize_params {
       image = data.google_compute_image.ubuntu.self_link
@@ -53,8 +65,6 @@ tags = ["${var.network_name}-web"]
    access_config {
       # Leave empty for dynamic public IP
     }
-  }
-
-  metadata_startup_script = "apt -y update; apt - y install nginx; echo ${var.app_name} > /var/www/html/index.html"
+  }  
   allow_stopping_for_update = true
 }
